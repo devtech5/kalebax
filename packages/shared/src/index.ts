@@ -32,6 +32,9 @@ export type {
 } from './formulaire/versionnage.js';
 export { typeDeSaisie, verifierTypes } from './formulaire/typage.js';
 export type { TypeInfere } from './formulaire/typage.js';
+
+export { validerSoumission } from './soumission/index.js';
+export type { RapportSoumission, ViolationSoumission } from './soumission/index.js';
 export {
   VERSION_SCHEMA_COURANTE,
   MOTIF_NOM,
