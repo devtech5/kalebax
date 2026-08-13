@@ -64,6 +64,10 @@ Une chaîne s'écrit entre guillemets simples. Le guillemet simple s'échappe en
 doublant : `'l''agent'`. Il n'existe aucun autre échappement — pas de `\n`, pas de
 `\t`. Un libellé multiligne n'a rien à faire dans une expression.
 
+**Conséquence utile : la barre oblique inverse est transmise telle quelle.** Un
+motif d'expression régulière s'écrit donc naturellement, `'^\d{4}$'`, sans le
+doublement des barres qu'imposent la plupart des langages.
+
 Les identifiants de question respectent `[a-z_][a-z0-9_]*` (`formulaires.md`
 §5.2). Les noms de fonction peuvent contenir un tiret : `count-selected`.
 
@@ -250,11 +254,20 @@ contrainte de longueur qui compte « é » pour deux caractères est un bogue
 incompréhensible pour le concepteur.
 
 **Restrictions sur `regex`** — le motif est un littéral, jamais une expression
-calculée. Il est limité à 200 caractères. Les références arrière (`\1`) et les
-quantificateurs imbriqués (`(a+)+`) sont **refusés à la publication** : ce sont
-les formes qui provoquent une explosion combinatoire du moteur d'expressions
-régulières et figeraient le téléphone d'un agent en pleine collecte. Le moteur
-est celui de la plateforme, sans drapeau autre que `u`.
+calculée : un motif construit à l'exécution ne peut pas être vérifié à la
+publication. Il est limité à 200 caractères. Trois formes sont **refusées à la
+publication**, parce qu'elles provoquent une explosion combinatoire du moteur
+d'expressions régulières et figeraient le téléphone d'un agent en pleine
+collecte :
+
+- les références arrière — `(a)\1` ;
+- un quantificateur appliqué à un groupe qui en contient déjà un — `(a+)+` ;
+- une alternance à l'intérieur d'un groupe quantifié — `(a|a)*`.
+
+Une alternance **non répétée** reste évidemment autorisée : `^(abidjan|bouake)$`
+est le cas courant et ne présente aucun risque.
+
+Le moteur est celui de la plateforme, sans drapeau autre que `u`.
 
 ### 6.5 Dates
 
@@ -318,8 +331,18 @@ appareil à 2 Go de RAM. Limites vérifiées **à la publication** (statiquement
 Le dépassement à l'exécution donne `null` et inscrit une violation dans le
 rapport de validation de la soumission — jamais un plantage, jamais un blocage.
 Le langage n'ayant ni boucle ni fonction définie par l'utilisateur, la récursion
-infinie est structurellement impossible ; le budget couvre les agrégats sur de
-grands `repeat`.
+infinie est structurellement impossible.
+
+**Le plafond de nœuds borne le nombre d'opérations.** Chaque nœud évalué compte
+pour une opération, et une expression publiable en compte au plus 500 : le
+budget d'exécution de 10 000 ne peut donc pas être atteint par une expression
+qui a passé la publication. Il reste comme défense en profondeur — contre un
+document de formulaire falsifié soumis directement à l'API, sans passer par la
+publication — et non comme un mécanisme de tous les jours.
+
+La profondeur est vérifiée **pendant** l'analyse et non sur l'arbre produit :
+une expression de profondeur 10 000 ferait déborder la pile d'appels avant qu'on
+ait pu mesurer quoi que ce soit.
 
 ## 9. Validation à la publication
 
@@ -342,6 +365,10 @@ la publication :
 Chaque erreur porte le `name` de la question, la position dans le texte de
 l'expression, et un message en français destiné au concepteur — pas une trace
 technique.
+
+Les points **4** et **5** exigent la liste ordonnée des questions et leur type
+déclaré : ils seront branchés en même temps que le schéma de formulaire. Les
+sept autres ne dépendent que de l'expression elle-même et sont actifs.
 
 ## 10. Graphe de dépendances
 
