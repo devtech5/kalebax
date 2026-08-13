@@ -1,0 +1,39 @@
+# Dépendances
+node_modules/
+.pnpm-store/
+
+# Compilation
+dist/
+build/
+*.tsbuildinfo
+
+# Tests
+coverage/
+
+# Environnement — ne jamais committer de secret
+.env
+.env.*
+!.env.example
+
+# Éditeurs
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# Systèmes
+.DS_Store
+Thumbs.db
+
+# Journaux
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Mobile (Expo / React Native)
+.expo/
+*.apk
+*.aab
+*.keystore
+
+# Desktop (Tauri)
+apps/desktop/src-tauri/target/

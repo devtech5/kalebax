@@ -1,0 +1,17 @@
+# Fins de ligne normalisées en LF dans le dépôt.
+# Le développement se fait sous Windows, la production sous Linux, et le mobile
+# est construit ailleurs encore : sans cette règle, chaque poste réécrit des
+# fichiers entiers et les différences deviennent illisibles.
+* text=auto eol=lf
+
+# Binaires — jamais de conversion
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.keystore binary
+*.apk binary
+*.aab binary
+*.xlsx binary

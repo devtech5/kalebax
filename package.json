@@ -1,0 +1,22 @@
+{
+  "name": "kalebax",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Plateforme de collecte de données terrain — web, mobile, desktop",
+  "license": "UNLICENSED",
+  "scripts": {
+    "build": "pnpm -r build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
+  }
+}

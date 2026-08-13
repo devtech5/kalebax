@@ -1,0 +1,16 @@
+{
+  "name": "@kalebax/shared",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Schéma de formulaire, évaluateur d'expressions, validation — partagé par les trois cibles et le serveur",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  }
+}
