@@ -8,6 +8,8 @@ import { AuthService } from './auth/auth.service.js';
 import { ENVOYEUR_CODE, EnvoyeurCodeJournal } from './auth/envoi-code.port.js';
 import { JetonsService } from './auth/jetons.service.js';
 import { SecretsService } from './auth/secrets.service.js';
+import { DatasetsController } from './datasets/datasets.controller.js';
+import { DatasetsService } from './datasets/datasets.service.js';
 import { FormulairesController } from './formulaires/formulaires.controller.js';
 import { FormulairesService } from './formulaires/formulaires.service.js';
 import { PrismaService } from './prisma/prisma.service.js';
@@ -20,6 +22,7 @@ import { SyncService } from './sync/sync.service.js';
 @Module({
   controllers: [
     AuthController,
+    DatasetsController,
     FormulairesController,
     SoumissionsController,
     SyncController,
@@ -28,6 +31,7 @@ import { SyncService } from './sync/sync.service.js';
     PrismaService,
     SecretsService,
     AuthService,
+    DatasetsService,
     FormulairesService,
     SoumissionsService,
     SyncService,

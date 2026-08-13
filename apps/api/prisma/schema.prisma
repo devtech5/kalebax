@@ -50,6 +50,7 @@ model Organization {
   submissions   Submission[]
   attachments   Attachment[]
   libraryItems  QuestionLibraryItem[]
+  datasets      Dataset[]
   refreshTokens RefreshToken[]
   auditEvents   AuditEvent[]
 
@@ -372,6 +373,60 @@ model Attachment {
 
   @@index([submissionId])
   @@index([organizationId, uploadedAt])
+}
+
+/* ------------------------------------------------------- jeux de données */
+
+/// Référentiel réutilisable — points de vente, localités, produits.
+///
+/// Il se met à jour indépendamment de la version du formulaire, et c'est toute
+/// sa raison d'être : une boutique qui ferme ne doit pas imposer de publier une
+/// nouvelle version et de couper les soumissions en cours.
+model Dataset {
+  id             String @id @default(uuid()) @db.Uuid
+  organizationId String @db.Uuid
+  /// Identifiant technique référencé par `optionsSource.dataset`.
+  name  String
+  label String
+  /// Incrémentée à chaque import qui change quelque chose.
+  version    Int      @default(1)
+  /// Entrées vivantes, pour l'affichage et les quotas.
+  entryCount Int      @default(0)
+  createdByUserId String  @db.Uuid
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  entries      DatasetEntry[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+}
+
+/// Une entrée de référentiel.
+///
+/// Elle n'est jamais supprimée physiquement : `deletedAtVersion` est ce qui
+/// permet de dire à un appareil resté sur la version 12 ce qui a disparu
+/// depuis, et de garder lisible une soumission qui a choisi une boutique
+/// aujourd'hui fermée.
+model DatasetEntry {
+  id             String @id @default(uuid()) @db.Uuid
+  organizationId String @db.Uuid
+  datasetId      String @db.Uuid
+  /// Valeur stockée dans les soumissions, et colonne à l'export.
+  value String
+  label String
+  /// Attributs plats, support du filtrage en cascade.
+  attributes Json?
+  /// Version où cette entrée est apparue ou a changé.
+  version          Int
+  deletedAtVersion Int?
+
+  dataset Dataset @relation(fields: [datasetId], references: [id], onDelete: Cascade)
+
+  @@unique([datasetId, value])
+  @@index([datasetId, version])
+  @@index([datasetId, deletedAtVersion])
 }
 
 /// Indicateurs standardisés qu'une organisation réemploie d'une enquête à
