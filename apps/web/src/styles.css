@@ -1,0 +1,7 @@
+/* Les jetons et les composants partagés. Le desktop embarque le même bundle. */
+@import '@kalebax/ui-web/styles.css';
+
+/* Tailwind doit voir les classes des paquets de l'espace de travail, sinon
+   elles sont absentes du CSS produit et les composants s'affichent nus. */
+@source '../../../packages/ui-web/src';
+@source './';
