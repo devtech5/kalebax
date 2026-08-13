@@ -11,6 +11,10 @@
     // l'exécution pour l'injection de dépendances.
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
+    // emitDecoratorMetadata a besoin des types à l'exécution pour résoudre
+    // l'injection : un `import type` les effacerait et Nest ne saurait plus
+    // quoi injecter.
+    "verbatimModuleSyntax": false,
     // Les décorateurs de propriété de Nest assignent après coup : la sémantique
     // stricte des champs de classe casserait l'injection.
     "useDefineForClassFields": false
