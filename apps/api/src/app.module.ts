@@ -2,15 +2,21 @@ import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { AppartenancesPrisma } from './auth/appartenances.prisma.js';
 import { LECTEUR_APPARTENANCES } from './auth/appartenances.port.js';
+import { AuthController } from './auth/auth.controller.js';
 import { AuthGuard } from './auth/auth.guard.js';
+import { AuthService } from './auth/auth.service.js';
+import { ENVOYEUR_CODE, EnvoyeurCodeJournal } from './auth/envoi-code.port.js';
 import { JetonsService } from './auth/jetons.service.js';
 import { SecretsService } from './auth/secrets.service.js';
 import { PrismaService } from './prisma/prisma.service.js';
 
 @Module({
+  controllers: [AuthController],
   providers: [
     PrismaService,
     SecretsService,
+    AuthService,
+    { provide: ENVOYEUR_CODE, useClass: EnvoyeurCodeJournal },
     {
       provide: JetonsService,
       useFactory: () =>
