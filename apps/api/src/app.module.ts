@@ -11,14 +11,17 @@ import { SecretsService } from './auth/secrets.service.js';
 import { FormulairesController } from './formulaires/formulaires.controller.js';
 import { FormulairesService } from './formulaires/formulaires.service.js';
 import { PrismaService } from './prisma/prisma.service.js';
+import { SoumissionsController } from './soumissions/soumissions.controller.js';
+import { SoumissionsService } from './soumissions/soumissions.service.js';
 
 @Module({
-  controllers: [AuthController, FormulairesController],
+  controllers: [AuthController, FormulairesController, SoumissionsController],
   providers: [
     PrismaService,
     SecretsService,
     AuthService,
     FormulairesService,
+    SoumissionsService,
     { provide: ENVOYEUR_CODE, useClass: EnvoyeurCodeJournal },
     {
       provide: JetonsService,
