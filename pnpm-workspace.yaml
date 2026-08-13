@@ -1,3 +1,14 @@
 packages:
   - 'apps/*'
   - 'packages/*'
+
+# Les scripts d'installation s'exécutent avec les droits du poste ou de l'image
+# de production : chacun est autorisé nommément, jamais en bloc.
+allowBuilds:
+  # Prisma télécharge ses moteurs de requête à l'installation.
+  '@prisma/engines': true
+  prisma: true
+  # Le hachage de mots de passe passe par @node-rs/argon2, qui livre des
+  # binaires précompilés : même algorithme, sans chaîne de compilation native à
+  # faire fonctionner sur chaque poste et dans chaque image.
+  argon2: false

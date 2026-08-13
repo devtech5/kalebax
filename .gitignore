@@ -7,6 +7,9 @@ dist/
 build/
 *.tsbuildinfo
 
+# Client Prisma — regénéré depuis le schéma, jamais édité à la main
+apps/api/generated/
+
 # Tests
 coverage/
 

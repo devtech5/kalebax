@@ -1,0 +1,30 @@
+# Base de données de développement.
+#
+# La production est hébergée dans une zone maîtrisée et communicable au client
+# (OHADA en priorité, Europe à défaut) : ce fichier ne sert qu'au poste de
+# développement.
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: kalebax-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: kalebax
+      POSTGRES_PASSWORD: kalebax
+      POSTGRES_DB: kalebax
+      # Le tri des chaînes dépend de la locale : la figer évite qu'un index
+      # construit sur un poste ne se comporte pas comme en production.
+      POSTGRES_INITDB_ARGS: '--locale=C --encoding=UTF8'
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U kalebax -d kalebax']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres-data:

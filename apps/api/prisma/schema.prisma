@@ -1,0 +1,415 @@
+// Schéma de données Kalebax — docs/formulaires.md §4 et docs/authentification.md §2.
+//
+// Règle absolue : toute table métier porte `organizationId`. La seule exception
+// est `User`, et elle est délibérée — un enquêteur travaille couramment pour
+// deux agences concurrentes, son rattachement vit dans `Membership`.
+//
+// Les montants sont des entiers. Le FCFA n'a pas de décimale, et un flottant
+// sur de l'argent est une faute qui se paie sur les avances et les paies.
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+// L'URL de connexion vit dans prisma.config.ts, pas ici : depuis Prisma 7, un
+// schéma ne porte plus de secret ni de dépendance à l'environnement.
+datasource db {
+  provider = "postgresql"
+}
+
+/* ------------------------------------------------------------------ tenants */
+
+enum OrganizationStatus {
+  active
+  /// Abonnement expiré : consultation et export possibles, collecte arrêtée.
+  /// Aucune donnée client n'est jamais supprimée.
+  readonly
+  suspended
+}
+
+model Organization {
+  id     String             @id @default(uuid()) @db.Uuid
+  name   String
+  slug   String             @unique
+  /// ISO 3166-1 alpha-2 — pilote la loi applicable en matière de données
+  /// personnelles.
+  country String            @db.Char(2)
+  /// Emplacement d'hébergement, communicable au client. Argument décisif pour
+  /// les bailleurs et les institutions.
+  dataRegion String
+  /// Durée de session locale hors ligne, en jours.
+  offlineGraceDays Int      @default(7)
+  status OrganizationStatus @default(active)
+  createdAt DateTime        @default(now())
+
+  memberships   Membership[]
+  projects      Project[]
+  forms         Form[]
+  formVersions  FormVersion[]
+  submissions   Submission[]
+  attachments   Attachment[]
+  libraryItems  QuestionLibraryItem[]
+  refreshTokens RefreshToken[]
+  auditEvents   AuditEvent[]
+
+  @@index([status])
+}
+
+enum UserStatus {
+  active
+  suspended
+  deleted
+}
+
+model User {
+  id String @id @default(uuid()) @db.Uuid
+  /// Concepteurs et superviseurs.
+  email String? @unique
+  /// Agents, au format E.164.
+  phone String? @unique
+  /// Argon2id. Nul pour un agent, qui s'authentifie par code à usage unique.
+  passwordHash String?
+  fullName     String
+  /// Langue de l'interface — distincte de la langue d'un formulaire.
+  preferredLanguage String     @default("fr")
+  status            UserStatus @default(active)
+  lastSeenAt        DateTime?
+  createdAt         DateTime   @default(now())
+
+  memberships   Membership[]
+  refreshTokens RefreshToken[]
+
+  @@index([status])
+}
+
+enum Role {
+  owner
+  admin
+  designer
+  supervisor
+  agent
+}
+
+enum MembershipStatus {
+  active
+  /// Interdit toute nouvelle collecte, mais autorise une dernière
+  /// synchronisation montante : perdre une semaine de collecte parce qu'un
+  /// compte a été fermé serait une faute produit.
+  revoked
+}
+
+model Membership {
+  id             String           @id @default(uuid()) @db.Uuid
+  userId         String           @db.Uuid
+  organizationId String           @db.Uuid
+  role           Role
+  status         MembershipStatus @default(active)
+  revokedAt      DateTime?
+  createdAt      DateTime         @default(now())
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, organizationId])
+  @@index([organizationId, role])
+}
+
+/* ------------------------------------------------------------- sessions */
+
+model RefreshToken {
+  id             String @id @default(uuid()) @db.Uuid
+  userId         String @db.Uuid
+  organizationId String @db.Uuid
+  /// SHA-256. Le jeton en clair n'existe que sur l'appareil.
+  tokenHash    String    @unique
+  deviceId     String?
+  /// « Tecno Spark 8, Awa » — pour que l'agent reconnaisse son appareil.
+  deviceLabel  String?
+  expiresAt    DateTime
+  revokedAt    DateTime?
+  /// Chaînage de rotation. Réutiliser un jeton déjà remplacé signifie qu'il a
+  /// été copié : toute la chaîne est alors révoquée.
+  replacedById String?   @unique @db.Uuid
+  lastUsedAt   DateTime?
+  createdAt    DateTime  @default(now())
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  replacedBy   RefreshToken?  @relation("Rotation", fields: [replacedById], references: [id], onDelete: SetNull)
+  replaces     RefreshToken?  @relation("Rotation")
+
+  @@index([userId, organizationId])
+  @@index([expiresAt])
+}
+
+enum OtpChannel {
+  sms
+  whatsapp
+}
+
+enum OtpPurpose {
+  login
+  enrollment
+}
+
+model OtpChallenge {
+  id    String @id @default(uuid()) @db.Uuid
+  phone String
+  /// Argon2id : un code à six chiffres est un secret, il ne se stocke pas en
+  /// clair.
+  codeHash   String
+  channel    OtpChannel
+  purpose    OtpPurpose @default(login)
+  attempts   Int        @default(0)
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime   @default(now())
+
+  @@index([phone, createdAt])
+  @@index([expiresAt])
+}
+
+/* ------------------------------------------------------------ formulaires */
+
+enum ProjectStatus {
+  draft
+  active
+  paused
+  closed
+}
+
+model Project {
+  id             String        @id @default(uuid()) @db.Uuid
+  organizationId String        @db.Uuid
+  name           String
+  description    String?
+  status         ProjectStatus @default(draft)
+  /// Finalité déclarée du traitement de données personnelles.
+  purpose         String?
+  startsAt        DateTime? @db.Date
+  endsAt          DateTime? @db.Date
+  createdByUserId String    @db.Uuid
+  createdAt       DateTime  @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  forms        Form[]
+  submissions  Submission[]
+
+  @@index([organizationId, status])
+}
+
+model Form {
+  id             String  @id @default(uuid()) @db.Uuid
+  organizationId String  @db.Uuid
+  projectId      String  @db.Uuid
+  name           String
+  /// Version publiée en cours.
+  currentVersionId String?  @unique @db.Uuid
+  createdByUserId  String   @db.Uuid
+  createdAt        DateTime @default(now())
+  archivedAt       DateTime?
+
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project        Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  versions       FormVersion[] @relation("VersionsDuFormulaire")
+  currentVersion FormVersion?  @relation("VersionCourante", fields: [currentVersionId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, projectId])
+}
+
+enum FormVersionStatus {
+  draft
+  published
+  retired
+}
+
+model FormVersion {
+  id             String @id @default(uuid()) @db.Uuid
+  organizationId String @db.Uuid
+  formId         String @db.Uuid
+  versionNumber  Int
+  /// Le document de formulaire, validé par packages/shared avant publication.
+  schema Json
+  status FormVersionStatus @default(draft)
+  /// Incompatible avec la version précédente. Déclenche un avertissement au
+  /// concepteur, jamais un refus.
+  breakingChange    Boolean   @default(false)
+  publishedAt       DateTime?
+  publishedByUserId String?   @db.Uuid
+  createdAt         DateTime  @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  form         Form         @relation("VersionsDuFormulaire", fields: [formId], references: [id], onDelete: Cascade)
+  courantePour Form?        @relation("VersionCourante")
+  submissions  Submission[]
+
+  @@unique([formId, versionNumber])
+  @@index([organizationId, status])
+}
+
+/* ------------------------------------------------------------- soumissions */
+
+enum SubmissionStatus {
+  received
+  validated
+  rejected
+}
+
+/// Ce qui s'est passé quand la position n'a pas été capturée. Un agent n'est
+/// jamais bloqué par une défaillance technique : la soumission part quand même
+/// et un superviseur tranche. C'est aussi un signal de qualité — un agent dont
+/// toutes les soumissions portent `denied` a désactivé sa localisation.
+enum GeopointStatus {
+  captured
+  denied
+  unavailable
+  timeout
+  skipped
+}
+
+model Submission {
+  /// Généré côté client, hors ligne. La création est idempotente : rejouer une
+  /// synchronisation ne duplique jamais une soumission.
+  id             String @id @db.Uuid
+  organizationId String @db.Uuid
+  projectId      String @db.Uuid
+  /// La version exacte qui a produit la donnée. Sans cela, un formulaire
+  /// modifié en cours de collecte rend le jeu de données ininterprétable.
+  formVersionId String @db.Uuid
+  data          Json
+  /// Clés reçues ne correspondant à aucune question. Conservées plutôt que
+  /// rejetées : une donnée collectée par un agent ne se jette pas.
+  extraData Json?
+  /// Détail des violations quand la soumission est enregistrée en `rejected`.
+  violations Json?
+  status     SubmissionStatus @default(received)
+  /// 1 à la réception, incrémenté à chaque correction.
+  revision          Int    @default(1)
+  collectedByUserId String @db.Uuid
+
+  /// Horloge de l'appareil — non fiable, et conservée pour cela : son écart
+  /// avec `receivedAt` est en lui-même un signal de qualité.
+  startedAt   DateTime
+  completedAt DateTime
+  /// Horloge serveur. Seule référence temporelle qui fasse foi.
+  receivedAt      DateTime @default(now())
+  durationSeconds Int
+
+  deviceId   String?
+  appVersion String?
+
+  startLatitude  Decimal? @db.Decimal(9, 6)
+  startLongitude Decimal? @db.Decimal(9, 6)
+  /// Précision en mètres. Sans elle, une position réseau à 1500 m est
+  /// indiscernable d'une position satellite à 5 m.
+  startAccuracy       Decimal?        @db.Decimal(8, 2)
+  startGeopointStatus GeopointStatus?
+
+  createdAt DateTime @default(now())
+
+  organization Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project      Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  formVersion  FormVersion          @relation(fields: [formVersionId], references: [id])
+  revisions    SubmissionRevision[]
+  attachments  Attachment[]
+
+  @@index([organizationId, projectId, receivedAt])
+  @@index([formVersionId])
+  @@index([collectedByUserId, receivedAt])
+}
+
+/// Immuabilité des données : toute correction après réception crée une
+/// révision. La révision 1 est écrite à la réception, si bien que l'état
+/// d'origine tel que l'agent l'a soumis reste toujours récupérable.
+model SubmissionRevision {
+  id           String @id @default(uuid()) @db.Uuid
+  submissionId String @db.Uuid
+  revision     Int
+  /// État complet des données APRÈS la modification.
+  data Json
+  /// `{ champ: { avant, après } }`
+  changedFields   Json
+  reason          String?
+  changedByUserId String   @db.Uuid
+  changedAt       DateTime @default(now())
+
+  submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@unique([submissionId, revision])
+}
+
+enum AttachmentKind {
+  photo
+  audio
+  video
+  signature
+  file
+}
+
+/// Une soumission est acceptée sans ses médias : le texte remonte en quelques
+/// kilo-octets sur un réseau dégradé, les photos suivent quand le réseau le
+/// permet. Les enregistrements sont donc créés à la réception, `uploadedAt` nul.
+model Attachment {
+  id             String @id @db.Uuid
+  organizationId String @db.Uuid
+  submissionId   String @db.Uuid
+  questionName   String
+  kind           AttachmentKind
+  storageKey     String
+  mimeType       String
+  sizeBytes      Int
+  /// SHA-256 — vérifie l'intégrité après un envoi différé.
+  checksum   String
+  capturedAt DateTime?
+  latitude   Decimal?  @db.Decimal(9, 6)
+  longitude  Decimal?  @db.Decimal(9, 6)
+  uploadedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  submission   Submission   @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@index([submissionId])
+  @@index([organizationId, uploadedAt])
+}
+
+/// Indicateurs standardisés qu'une organisation réemploie d'une enquête à
+/// l'autre.
+model QuestionLibraryItem {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @db.Uuid
+  name           String
+  definition     Json
+  tags           String[]
+  createdByUserId String   @db.Uuid
+  createdAt       DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+}
+
+/* ------------------------------------------------------------------ audit */
+
+/// Publication d'un formulaire, modification d'une soumission, suppression d'un
+/// compte agent, export massif : qui, quoi, quand.
+///
+/// Ne contient jamais de mot de passe, de code à usage unique, de jeton, ni de
+/// condensat de ces éléments.
+model AuditEvent {
+  id             String  @id @default(uuid()) @db.Uuid
+  organizationId String? @db.Uuid
+  actorUserId    String? @db.Uuid
+  action         String
+  targetType     String?
+  targetId       String?
+  metadata       Json?
+  ipAddress      String?
+  createdAt      DateTime @default(now())
+
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, createdAt])
+  @@index([actorUserId, createdAt])
+}

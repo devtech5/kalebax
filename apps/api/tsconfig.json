@@ -1,0 +1,19 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "module": "NodeNext",
+    "moduleResolution": "nodenext",
+    "lib": ["ES2023"],
+    "types": ["node"],
+    // NestJS repose sur les décorateurs et sur la lecture des types à
+    // l'exécution pour l'injection de dépendances.
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    // Les décorateurs de propriété de Nest assignent après coup : la sémantique
+    // stricte des champs de classe casserait l'injection.
+    "useDefineForClassFields": false
+  },
+  "include": ["src/**/*"]
+}
