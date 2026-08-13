@@ -12,6 +12,7 @@ import {
   STOCKAGE_MEDIAS,
   type StockageMedias,
 } from './stockage-medias.port.js';
+import { DatasetsService } from '../datasets/datasets.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import {
   SoumissionsService,
@@ -49,6 +50,7 @@ export class SyncService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly soumissions: SoumissionsService,
+    private readonly datasets: DatasetsService,
     @Inject(STOCKAGE_MEDIAS) private readonly medias: StockageMedias,
   ) {}
 
@@ -231,6 +233,7 @@ export class SyncService {
     contexte: ContexteAppelant,
     projectId: string,
     versionsDetenues: readonly string[],
+    versionsJeuxDonnees: Readonly<Record<string, number>> = {},
   ) {
     // Un membre révoqué envoie ce qu'il a collecté, mais ne reçoit plus rien.
     if (contexte.revoque) {
@@ -276,6 +279,10 @@ export class SyncService {
           status: v.status,
           schema: v.schema,
         })),
+      // Les référentiels descendent avec les formulaires, mais suivent leur
+      // propre versionnage : un point de vente qui ferme ne fait pas publier
+      // une version de formulaire.
+      jeuxDonnees: await this.datasets.delta(contexte, versionsJeuxDonnees),
       // Ce que l'appareil peut oublier : plus rien ne le publie, et aucune
       // soumission locale ne devrait s'y rattacher.
       versionsObsoletes: [...detenues].filter(

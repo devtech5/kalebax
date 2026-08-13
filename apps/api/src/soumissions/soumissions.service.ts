@@ -1,5 +1,10 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { validerSoumission, type DocumentFormulaire } from '@kalebax/shared';
+import {
+  datasetsReferences,
+  validerSoumission,
+  type DocumentFormulaire,
+} from '@kalebax/shared';
+import { DatasetsService } from '../datasets/datasets.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import {
   peutVoirToutesLesSoumissions,
@@ -38,7 +43,10 @@ export interface ResultatReception {
 
 @Injectable()
 export class SoumissionsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly datasets: DatasetsService,
+  ) {}
 
   /**
    * Réception d'une soumission — docs/formulaires.md §8.
@@ -93,11 +101,19 @@ export class SoumissionsService {
       );
     }
 
-    const rapport = validerSoumission(
-      version.schema as unknown as DocumentFormulaire,
-      entrante.data,
-      { now: entrante.startedAt },
+    const document = version.schema as unknown as DocumentFormulaire;
+
+    // Le serveur a le document et les référentiels ; l'appareil n'a que le
+    // document. C'est donc ici qu'une valeur de jeu de données est vérifiable.
+    const valeursDataset = await this.datasets.valeursAutorisees(
+      contexte,
+      datasetsReferences(document),
     );
+
+    const rapport = validerSoumission(document, entrante.data, {
+      now: entrante.startedAt,
+      valeursDataset,
+    });
 
     const debut = new Date(entrante.startedAt);
     const fin = new Date(entrante.completedAt);

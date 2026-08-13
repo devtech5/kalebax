@@ -180,6 +180,24 @@ export interface ElementSitue {
   readonly chemin: readonly string[];
 }
 
+/**
+ * Noms des jeux de données dont dépend un formulaire.
+ *
+ * Sert à charger les valeurs autorisées avant de valider une soumission, et à
+ * savoir quels référentiels doivent descendre sur l'appareil avec le document.
+ */
+export function datasetsReferences(document: DocumentFormulaire): string[] {
+  const noms = new Set<string>();
+  for (const { element } of parcourir(document)) {
+    if (!estQuestion(element)) continue;
+    const source = element.optionsSource;
+    if (source !== undefined && source.kind !== 'inline') {
+      noms.add(source.dataset);
+    }
+  }
+  return [...noms];
+}
+
 /** Parcourt le document en profondeur, dans l'ordre d'affichage. */
 export function* parcourir(
   document: DocumentFormulaire,

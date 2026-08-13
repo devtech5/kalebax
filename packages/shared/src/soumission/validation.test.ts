@@ -169,12 +169,62 @@ describe('options', () => {
     expect(codes(document, { langues: ['fr', 'anglais'] })).toContain('option-inconnue');
   });
 
-  it('ne vérifie pas les options venues d\'un jeu de données', () => {
-    // Le référentiel n'est pas dans le document : il est vérifié ailleurs.
+  it('ne vérifie pas les options d\'un jeu de données sans le référentiel', () => {
+    // C'est le cas de l'appareil : le référentiel n'est pas dans le document,
+    // et l'interface ne propose de toute façon que des options existantes.
     const externe = doc([
       q('ville', 'select_one', { optionsSource: { kind: 'dataset', dataset: 'villes' } }),
     ]);
     expect(valider(externe, { ville: 'nimporte_quoi' }).valide).toBe(true);
+  });
+});
+
+describe('options venues d\'un jeu de données', () => {
+  const document = doc([
+    q('ville', 'select_one', { optionsSource: { kind: 'dataset', dataset: 'villes' } }),
+    q('produits', 'select_multiple', {
+      optionsSource: { kind: 'cascade', dataset: 'catalogue', filter: '${ville} != null' },
+    }),
+  ]);
+
+  const referentiels = {
+    villes: new Set(['abidjan', 'bouake']),
+    catalogue: new Set(['riz', 'huile']),
+  };
+
+  function validerAvecReferentiels(donnees: Record<string, unknown>) {
+    return validerSoumission(document, donnees, { now: NOW, valeursDataset: referentiels });
+  }
+
+  it('accepte une valeur du référentiel', () => {
+    expect(validerAvecReferentiels({ ville: 'abidjan' }).valide).toBe(true);
+  });
+
+  it('signale une valeur absente du référentiel', () => {
+    const rapport = validerAvecReferentiels({ ville: 'yamoussoukro' });
+    expect(rapport.violations.map((v) => v.code)).toContain('option-inconnue');
+  });
+
+  it('vérifie chaque valeur d\'une sélection multiple', () => {
+    expect(validerAvecReferentiels({ produits: ['riz', 'huile'] }).valide).toBe(true);
+    expect(
+      validerAvecReferentiels({ produits: ['riz', 'inconnu'] }).violations,
+    ).toHaveLength(1);
+  });
+
+  it('vérifie aussi une source en cascade', () => {
+    const rapport = validerAvecReferentiels({ produits: ['sucre'] });
+    expect(rapport.violations.map((v) => v.name)).toEqual(['produits']);
+  });
+
+  it('ne vérifie que les référentiels fournis', () => {
+    // Un référentiel absent de la liste n'est pas une raison de refuser : le
+    // serveur peut n'avoir chargé que ceux qu'il connaît.
+    const rapport = validerSoumission(document, { ville: 'inconnue' }, {
+      now: NOW,
+      valeursDataset: { catalogue: new Set(['riz']) },
+    });
+    expect(rapport.valide).toBe(true);
   });
 });
 

@@ -3,6 +3,7 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { BasePrismaSoumissions } from './prisma-memoire-soumissions.js';
 import { SoumissionsService, type SoumissionEntrante } from './soumissions.service.js';
+import type { DatasetsService } from '../datasets/datasets.service.js';
 import type { ContexteAppelant } from '../tenant/contexte.js';
 
 const ORG_A = randomUUID();
@@ -54,9 +55,17 @@ function entrante(extra: Partial<SoumissionEntrante> = {}): SoumissionEntrante {
   };
 }
 
+/**
+ * Aucun référentiel : ces tests portent sur les options écrites dans le
+ * document, dont la vérification ne dépend pas de la base.
+ */
+function sansReferentiels(): DatasetsService {
+  return { valeursAutorisees: async () => ({}) } as unknown as DatasetsService;
+}
+
 beforeEach(() => {
   base = new BasePrismaSoumissions();
-  service = new SoumissionsService(base.enServicePrisma());
+  service = new SoumissionsService(base.enServicePrisma(), sansReferentiels());
   base.versions.push({
     id: VERSION,
     organizationId: ORG_A,

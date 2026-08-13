@@ -53,6 +53,25 @@ const schemaAnnonceMedia = z.object({
 
 const schemaEtat = z.object({ ids: z.array(z.uuid()).min(1).max(500) });
 
+/**
+ * Lit `points_vente:12,localites:4`.
+ *
+ * Une entrée mal formée est ignorée plutôt que rejetée : un appareil dont le
+ * paramètre est abîmé recevra l'intégral, ce qui coûte des octets mais le
+ * laisse travailler. Refuser le bundle l'empêcherait de partir en mission.
+ */
+function lireVersionsJeux(brut?: string): Record<string, number> {
+  if (brut === undefined || brut === '') return {};
+  const versions: Record<string, number> = {};
+  for (const morceau of brut.split(',')) {
+    const [nom, version] = morceau.split(':');
+    const numero = Number(version);
+    if (nom === undefined || nom === '' || !Number.isInteger(numero) || numero < 0) continue;
+    versions[nom] = numero;
+  }
+  return versions;
+}
+
 @Controller('sync')
 export class SyncController {
   constructor(private readonly sync: SyncService) {}
@@ -118,15 +137,22 @@ export class SyncController {
     await this.sync.completerMedia(appelant, mediaId);
   }
 
-  /** Différentiel : l'appareil annonce ce qu'il détient, le serveur complète. */
+  /**
+   * Différentiel : l'appareil annonce ce qu'il détient, le serveur complète.
+   *
+   * `datasets` se lit `points_vente:12,localites:4` — le format tient dans une
+   * URL et se relit à l'œil dans un journal de serveur, ce qui compte quand on
+   * diagnostique une synchronisation depuis un bureau régional.
+   */
   @Get('bundle')
   paquet(
     @Appelant() appelant: ContexteAppelant,
     @Query('projectId') projectId: string,
     @Query('versions') versions?: string,
+    @Query('datasets') datasets?: string,
   ) {
     const detenues = versions === undefined || versions === '' ? [] : versions.split(',');
-    return this.sync.paquet(appelant, projectId, detenues);
+    return this.sync.paquet(appelant, projectId, detenues, lireVersionsJeux(datasets));
   }
 
   /** Diagnostic de terrain : ce que le serveur pense détenir de cet appareil. */

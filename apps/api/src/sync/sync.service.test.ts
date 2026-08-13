@@ -5,6 +5,7 @@ import { BasePrismaSync } from './prisma-memoire-sync.js';
 import { StockageMediasMemoire } from './stockage-medias.port.js';
 import { SyncService } from './sync.service.js';
 import { SoumissionsService, type SoumissionEntrante } from '../soumissions/soumissions.service.js';
+import type { DatasetsService } from '../datasets/datasets.service.js';
 import type { ContexteAppelant } from '../tenant/contexte.js';
 
 const ORG_A = randomUUID();
@@ -15,6 +16,7 @@ const AGENT = randomUUID();
 let base: BasePrismaSync;
 let stockage: StockageMediasMemoire;
 let service: SyncService;
+let datasets: DatasetsService;
 let projetId: string;
 
 function contexte(extra: Partial<ContexteAppelant> = {}): ContexteAppelant {
@@ -50,9 +52,15 @@ function entrante(extra: Partial<SoumissionEntrante> = {}): SoumissionEntrante {
 beforeEach(() => {
   base = new BasePrismaSync();
   stockage = new StockageMediasMemoire();
+  datasets = {
+    valeursAutorisees: async () => ({}),
+    delta: async () => [],
+  } as unknown as DatasetsService;
+
   service = new SyncService(
     base.enServicePrisma(),
-    new SoumissionsService(base.enServicePrisma()),
+    new SoumissionsService(base.enServicePrisma(), datasets),
+    datasets,
     stockage,
   );
 

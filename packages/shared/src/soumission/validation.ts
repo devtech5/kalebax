@@ -56,10 +56,23 @@ function estVide(valeur: unknown): boolean {
   return false;
 }
 
+export interface OptionsValidationSoumission {
+  /** Instant figé au démarrage de la saisie, transporté avec la soumission. */
+  readonly now: string;
+  /**
+   * Valeurs acceptables des jeux de données référencés, par nom.
+   *
+   * Absent côté appareil — le référentiel y est déjà filtré par l'interface,
+   * qui ne propose que des options existantes. Fourni côté serveur, qui a le
+   * document et les référentiels.
+   */
+  readonly valeursDataset?: Readonly<Record<string, ReadonlySet<string>>> | undefined;
+}
+
 export function validerSoumission(
   document: DocumentFormulaire,
   donnees: Readonly<Record<string, unknown>>,
-  options: { readonly now: string },
+  options: OptionsValidationSoumission,
 ): RapportSoumission {
   const violations: ViolationSoumission[] = [];
   const extraData: Record<string, unknown> = {};
@@ -192,7 +205,15 @@ export function validerSoumission(
         continue;
       }
 
-      validerQuestion(element, valeur, chemin, contexte, signaler, attendus);
+      validerQuestion(
+        element,
+        valeur,
+        chemin,
+        contexte,
+        signaler,
+        attendus,
+        options.valeursDataset,
+      );
     }
   };
 
@@ -235,6 +256,7 @@ function validerQuestion(
   contexte: ContexteEvaluation,
   signaler: (code: string, message: string, name: string, chemin: string) => void,
   attendus: Set<string>,
+  valeursDataset?: Readonly<Record<string, ReadonlySet<string>>> | undefined,
 ): void {
   const { name, type } = question;
 
@@ -264,7 +286,7 @@ function validerQuestion(
     return;
   }
 
-  validerOptions(question, valeur, chemin, signaler, attendus);
+  validerOptions(question, valeur, chemin, signaler, attendus, valeursDataset);
   validerCardinaliteMedia(question, valeur, chemin, signaler);
   validerContrainte(question, valeur, chemin, contexte, signaler);
 }
@@ -325,10 +347,30 @@ function validerOptions(
   chemin: string,
   signaler: (code: string, message: string, name: string, chemin: string) => void,
   attendus: Set<string>,
+  valeursDataset?: Readonly<Record<string, ReadonlySet<string>>> | undefined,
 ): void {
-  // Les options d'un jeu de données ne sont pas dans le document : elles sont
-  // vérifiées ailleurs, au moment où le référentiel est disponible.
-  if (question.optionsSource?.kind !== 'inline') return;
+  const source = question.optionsSource;
+
+  // Les options d'un jeu de données ne sont pas dans le document. Elles ne sont
+  // vérifiées que si l'appelant a fourni le référentiel — le serveur l'a, pas
+  // l'appareil.
+  if (source !== undefined && source.kind !== 'inline') {
+    const autorisees = valeursDataset?.[source.dataset];
+    if (autorisees === undefined) return;
+
+    for (const choisie of Array.isArray(valeur) ? valeur : [valeur]) {
+      if (autorisees.has(String(choisie))) continue;
+      signaler(
+        'option-inconnue',
+        `« ${String(choisie)} » ne figure pas dans le référentiel « ${source.dataset} ».`,
+        question.name,
+        chemin,
+      );
+    }
+    return;
+  }
+
+  if (source?.kind !== 'inline') return;
   const options = question.options ?? [];
   const connues = new Map(options.map((o) => [o.value, o]));
 
