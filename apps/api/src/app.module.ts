@@ -13,15 +13,30 @@ import { FormulairesService } from './formulaires/formulaires.service.js';
 import { PrismaService } from './prisma/prisma.service.js';
 import { SoumissionsController } from './soumissions/soumissions.controller.js';
 import { SoumissionsService } from './soumissions/soumissions.service.js';
+import { STOCKAGE_MEDIAS, StockageMediasDisque } from './sync/stockage-medias.port.js';
+import { SyncController } from './sync/sync.controller.js';
+import { SyncService } from './sync/sync.service.js';
 
 @Module({
-  controllers: [AuthController, FormulairesController, SoumissionsController],
+  controllers: [
+    AuthController,
+    FormulairesController,
+    SoumissionsController,
+    SyncController,
+  ],
   providers: [
     PrismaService,
     SecretsService,
     AuthService,
     FormulairesService,
     SoumissionsService,
+    SyncService,
+    // Fabrique et non useClass : le constructeur prend un chemin, que Nest
+    // tenterait d'injecter comme s'il s'agissait d'une dépendance.
+    {
+      provide: STOCKAGE_MEDIAS,
+      useFactory: () => new StockageMediasDisque(process.env['MEDIA_DIR']),
+    },
     { provide: ENVOYEUR_CODE, useClass: EnvoyeurCodeJournal },
     {
       provide: JetonsService,

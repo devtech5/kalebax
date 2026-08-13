@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import { existsSync } from 'node:fs';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { json, raw } from 'express';
 import { AppModule } from './app.module.js';
 
 // Node lit les fichiers d'environnement nativement depuis la 20.12.
@@ -10,11 +11,19 @@ if (existsSync('.env')) process.loadEnvFile('.env');
 async function demarrer(): Promise<void> {
   verifierConfiguration();
 
-  const application = await NestFactory.create(AppModule, {
-    // Les corps de requête d'une synchronisation portent des lots de
-    // soumissions : la limite par défaut d'Express est trop basse.
-    bodyParser: true,
-  });
+  const application = await NestFactory.create(AppModule, { bodyParser: true });
+
+  // Les morceaux de pièces jointes arrivent en binaire brut. Les encoder en
+  // base64 gonflerait de 33 % un transfert déjà payé au mégaoctet par l'agent,
+  // et sans cette configuration Express rendrait un corps vide.
+  application.use(
+    '/sync/attachments',
+    raw({ type: 'application/octet-stream', limit: '1mb' }),
+  );
+
+  // Un lot compressé est plafonné à 512 Ko côté client ; la marge couvre
+  // l'écart entre l'estimation et la sérialisation réelle.
+  application.use(json({ limit: '2mb' }));
 
   application.useGlobalPipes(
     new ValidationPipe({

@@ -51,8 +51,14 @@ interface LigneRevision {
   changedAt: Date;
 }
 
+/** Égalité simple, plus l'opérateur `in` — les seuls filtres que les services utilisent. */
 function correspond(ligne: Record<string, unknown>, filtre: Record<string, unknown>): boolean {
-  return Object.entries(filtre).every(([cle, attendu]) => ligne[cle] === attendu);
+  return Object.entries(filtre).every(([cle, attendu]) => {
+    if (attendu !== null && typeof attendu === 'object' && 'in' in attendu) {
+      return (attendu.in as unknown[]).includes(ligne[cle]);
+    }
+    return ligne[cle] === attendu;
+  });
 }
 
 export class BasePrismaSoumissions {
