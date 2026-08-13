@@ -24,6 +24,14 @@ export type { Noeud, OperateurBinaire } from './expression/ast.js';
 
 export { validerDocument, validerRegles, SCHEMA_DOCUMENT } from './formulaire/index.js';
 export type { ResultatValidation, AnomalieDocument } from './formulaire/index.js';
+export { comparerVersions } from './formulaire/versionnage.js';
+export type {
+  Changement,
+  NatureChangement,
+  RapportComparaison,
+} from './formulaire/versionnage.js';
+export { typeDeSaisie, verifierTypes } from './formulaire/typage.js';
+export type { TypeInfere } from './formulaire/typage.js';
 export {
   VERSION_SCHEMA_COURANTE,
   MOTIF_NOM,

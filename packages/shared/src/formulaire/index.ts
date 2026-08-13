@@ -63,4 +63,12 @@ function lireVersionTropRecente(brut: unknown): AnomalieDocument | null {
 export { validerRegles } from './regles.js';
 export type { AnomalieDocument } from './regles.js';
 export { SCHEMA_DOCUMENT } from './structure.js';
+export { comparerVersions } from './versionnage.js';
+export type {
+  Changement,
+  NatureChangement,
+  RapportComparaison,
+} from './versionnage.js';
+export { typeDeSaisie, verifierTypes } from './typage.js';
+export type { TypeInfere } from './typage.js';
 export * from './types.js';

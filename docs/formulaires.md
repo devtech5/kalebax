@@ -458,7 +458,18 @@ apparence, ajout d'une option, assouplissement d'une contrainte.
 
 **Changements incompatibles** (`breakingChange: true`) : suppression d'une
 question, changement de `type` ou de `name`, passage en `required`, durcissement
-d'une contrainte, suppression d'une option déjà utilisée.
+d'une contrainte, suppression d'une option déjà utilisée, abaissement d'un
+plafond (`maxCount`, `maxRepeat`), relèvement d'un minimum, modification d'une
+condition d'affichage.
+
+La comparaison se fait par **identifiant technique**, jamais par nom : c'est ce
+qui distingue un renommage d'une suppression suivie d'un ajout.
+
+**On ne compare pas deux expressions.** Décider laquelle de deux contraintes est
+la plus permissive est indécidable dans le cas général, et le prétendre
+produirait un faux verdict de compatibilité — bien pire qu'un avertissement de
+trop. Toute modification d'une `constraint` ou d'un `relevant` est donc classée
+en rupture ; seule leur suppression est un assouplissement certain.
 
 Comportement à la publication :
 
