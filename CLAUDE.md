@@ -209,14 +209,29 @@ dans des réponses en ligne.
 
 ## Commandes du projet
 
-(À compléter au fur et à mesure de la mise en place.)
+Les tests tournent d'un bloc pour tout le monorepo : le jeu de cas de
+l'évaluateur doit rester exécutable à l'identique, où qu'il soit rejoué.
 
 ```bash
-pnpm --filter api start:dev
-pnpm --filter api test
-pnpm --filter api prisma migrate dev
-pnpm --filter web dev
-pnpm --filter mobile android
-pnpm --filter desktop dev
-pnpm --filter desktop build
+pnpm test                              # tout le monorepo
+pnpm typecheck                         # TypeScript strict, tous les paquets
+docker compose up -d postgres          # base de développement
+pnpm --filter @kalebax/api prisma:migrate
+pnpm --filter @kalebax/api start:dev
 ```
+
+Le nom des paquets est complet (`@kalebax/api`, `@kalebax/shared`) — pnpm ne
+résout pas les raccourcis dans un espace de noms.
+
+À venir, au fur et à mesure : `pnpm --filter @kalebax/web dev`,
+`pnpm --filter @kalebax/mobile android`, `pnpm --filter @kalebax/desktop dev`.
+
+## État d'avancement
+
+**Fondations terminées.** `packages/shared` porte le moteur de formulaires —
+schéma, évaluateur d'expressions, versionnage, validation des soumissions —
+et `apps/api` l'expose derrière une authentification maison et un isolement
+multi-tenant à trois couches.
+
+Reste à faire avant de pouvoir démarrer l'API : la première migration Prisma,
+qui attend une base PostgreSQL accessible.
