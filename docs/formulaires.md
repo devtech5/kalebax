@@ -275,6 +275,12 @@ L'agent choisit sa langue dans l'application ; le repli se fait sur
   données ; les autres rôles ne peuvent ni les modifier ni les supprimer, mais
   peuvent ajouter les leurs.
 
+Attributs propres à certains types : `calculation` sur un `calculate`,
+`optionsSource` et `options` sur les questions à choix (§5.5), `minCount` et
+`maxCount` sur les questions média (§5.6). Les porter sur un autre type est
+refusé à la publication — un attribut sans effet est presque toujours le signe
+d'une erreur de conception, pas d'une intention.
+
 ### 5.3 Types de questions
 
 | Type | Donnée stockée | Notes |
@@ -292,7 +298,7 @@ L'agent choisit sa langue dans l'application ; le repli se fait sur
 | `photo`, `audio`, `video`, `file` | id[] d'`Attachment` | `minCount` / `maxCount` — voir §5.6 |
 | `signature` | id d'`Attachment` | consentement de l'enquêté, réception de matériel |
 | `barcode` | string | code-barres produit, QR d'identification |
-| `calculate` | dépend de l'expression | non saisi, jamais affiché |
+| `calculate` | dépend de l'expression | non saisi, jamais affiché ; porte son expression dans l'attribut `calculation` |
 | `note` | — | texte d'information, aucune donnée |
 | `group` | — | section, avec ses `children` |
 | `repeat` | tableau d'objets | groupe répétable (§5.4) |

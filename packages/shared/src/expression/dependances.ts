@@ -33,6 +33,48 @@ export function extraireReferences(noeud: Noeud): string[] {
   return [...noms];
 }
 
+export interface ReferenceSituee {
+  readonly nom: string;
+  /** Vrai pour `${groupe.champ}` : un agrégat sur un groupe répétable. */
+  readonly compose: boolean;
+  readonly position: number;
+}
+
+/** Références avec leur position, pour situer une anomalie dans le texte. */
+export function extraireReferencesSituees(noeud: Noeud): ReferenceSituee[] {
+  const trouvees: ReferenceSituee[] = [];
+  const parcourir = (n: Noeud): void => {
+    switch (n.type) {
+      case 'reference': {
+        const premier = n.chemin[0];
+        if (premier !== undefined) {
+          trouvees.push({
+            nom: premier,
+            compose: n.chemin.length > 1,
+            position: n.position,
+          });
+        }
+        return;
+      }
+      case 'unaire':
+        parcourir(n.operande);
+        return;
+      case 'binaire':
+        parcourir(n.gauche);
+        parcourir(n.droite);
+        return;
+      case 'appel':
+        for (const argument of n.arguments) parcourir(argument);
+        return;
+      case 'litteral':
+      case 'courant':
+        return;
+    }
+  };
+  parcourir(noeud);
+  return trouvees;
+}
+
 /** Une question et ce qu'elle lit. */
 export interface Dependance {
   readonly nom: string;

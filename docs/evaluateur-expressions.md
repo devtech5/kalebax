@@ -366,9 +366,12 @@ Chaque erreur porte le `name` de la question, la position dans le texte de
 l'expression, et un message en français destiné au concepteur — pas une trace
 technique.
 
-Les points **4** et **5** exigent la liste ordonnée des questions et leur type
-déclaré : ils seront branchés en même temps que le schéma de formulaire. Les
-sept autres ne dépendent que de l'expression elle-même et sont actifs.
+**Le typage ne bloque jamais à tort.** Un faux positif empêche un concepteur de
+publier un formulaire correct, ce qui est bien pire qu'un faux négatif — que
+l'évaluation traitera simplement en `null`. Une incompatibilité n'est donc
+signalée que si les deux types en présence sont connus et inconciliables. Le
+type d'un `calculate` dépend de son expression, celui d'un `geopoint` n'est pas
+une valeur du langage : les deux valent « inconnu » et ne déclenchent rien.
 
 ## 10. Graphe de dépendances
 
