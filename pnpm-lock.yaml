@@ -85,6 +85,12 @@ importers:
         specifier: ^4.1.10
         version: 4.1.10(@types/node@26.2.0)(vite@8.2.1(@types/node@26.2.0)(jiti@2.7.0)(terser@5.50.0))
 
+  packages/sync:
+    dependencies:
+      '@kalebax/storage':
+        specifier: workspace:*
+        version: link:../storage
+
 packages:
 
   '@angular-devkit/core@19.2.24':

@@ -1,0 +1,19 @@
+{
+  "name": "@kalebax/sync",
+  "version": "0.0.0",
+  "private": true,
+  "description": "File d'attente, lots et reprise sur coupure — sans rendu ni réseau concret",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@kalebax/storage": "workspace:*"
+  }
+}
